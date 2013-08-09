@@ -1,0 +1,10 @@
+libjinxes
+=========
+
+This is a C99 terminal drawing library inspired by termbox.
+
+Rationale
+---------
+
+The reason for the revival is termbox's use of waf as a build system and
+the potential for something even simpler than termbox.

@@ -1,0 +1,20 @@
+.Dd $Mdocdate$
+.Dt jinxes 3
+.Os
+.Sh NAME
+.Nm jx_init, jx_end
+.Nd Simple terminal screen handling
+.Sh SYNOPSIS
+.In jinxes.h
+.Ft int
+.Fn jx_init "void"
+.Ft void
+.Fn jx_end "void"
+.Sh DESCRIPTION
+The following functions display characters in a terminal.
+.Pp
+.Fn jx_init
+initialises the library.
+.Pp
+.Fn jx_end
+finalises the library.
