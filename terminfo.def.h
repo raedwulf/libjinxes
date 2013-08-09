@@ -1,5 +1,4 @@
-/* supported terminal extensions */
-/* taken from ncurses' term.h */
+/* terminfo.h gets generated from terminfo.def.h and the terminfo database */
 
 #undef ENTRY_BOOLEAN
 #undef ENTRY_NUMBER
@@ -56,6 +55,9 @@ enum terminfo_string {
 static int terminfo_map_string[] = {
 #endif
 #endif
+
+/* supported terminal extensions */
+/* taken from ncurses' term.h */
 
 /* functions */
 ENTRY_STRING(CLEAR_SCREEN        ,5 )
