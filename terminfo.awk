@@ -20,10 +20,11 @@ BEGIN {
 	print "\n#ifdef TERMINFO_ESCAPE_CODES\n"
 	print "\ntypedef struct {"
 	print "\tshort location;"
-	print "\tconst char *esc;"
+	print "\tshort esc;"
 	print "} terminal_variant;"
 	FS="="
 	RS=" "
+	esc = 1
 }
 
 {
@@ -40,14 +41,26 @@ BEGIN {
 		gsub(/\\/, "\\\\")
 		gsub(/\\\\E/, "\\033")
 		gsub(/"/, "\\\"")
-		if (caps[$1]) capsv[j,$1] = $2
+		if (caps[$1]) {
+			if (esci[$2])
+				capsv[j,$1] = esci[$2]
+			else {
+				capsv[j,$1] = esc - 1
+				esci[$2] = esc
+				escp[esc] = $2
+				esc++
+			}
+		}
+	}
+	for (i = 1; i < num; i++) {
+		if (!capsv[j,caps[i]]) capsv[j,caps[i]] = -1
 	}
 	RS=" "
 	close (infocmp)
 
 	capstr = ""
 	for (i = 1; i < num; i++)
-		capstr = capstr "\"" capsv[j,caps[i]] "\"" (i == num - 1 ? "" : ",")
+		capstr = capstr capsv[j,caps[i]] (i == num - 1 ? "" : ",")
 
 	largest_sameness = -1
 	largest_j = -1
@@ -65,42 +78,46 @@ BEGIN {
 
 	if (largest_sameness > (num / 2)) {
 		if (capstrdic[capstr]) {
-			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1,NULL},"
+			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1,NULL},\n"
 		} else if (largest_sameness == num) {
-			terminals = terminals "{\"" term "\",NULL," parent[largest_j] ","varstrdic[largest_j]"},"
+			terminals = terminals "{\"" term "\",NULL," parent[largest_j] ","varstrdic[largest_j]"},\n"
 		} else {
 			parent[j] = largest_j - 1
 			varstrdic[j] = term_"_var"
 			varstr = ""
 			for (i = 1; i < num; i++) {
 				if (capsv[j,caps[i]] != capsv[largest_j,caps[i]])
-					varstr = varstr "{" (i - 1) ",\"" capsv[j,caps[i]] "\"},"
+					varstr = varstr "{" (i - 1) "," capsv[j,caps[i]] "},"
 			}
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s", varstr
 			print "};"
-			terminals = terminals "{\"" term "\",NULL," (largest_j - 1) ","term_"_var},"
+			terminals = terminals "{\"" term "\",NULL," (largest_j - 1) ","term_"_var},\n"
 		}
 	} else {
 		#if (!capstrdic[capstr]) {
 		capstrdic[capstr] = term_"_esc"
-		printf "static const char *"term_"_esc[] = {"
+		printf "static const short "term_"_esc[] = {"
 		printf "%s", capstr
 		print "};"
 		#}
-		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1, NULL},"
+		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1, NULL},\n"
 	}
 
 	j++
 }
 
 END {
+	print "\nstatic const char *terminfo_escape_table[] = {"
+	for (i = 1; i < esc; i++)
+		print "\""escp[i]"\"" (i < esc - 1 ? "," : "")
+	print "};"
 	print "\ntypedef struct {"
 	print "\tconst char *name;"
-	print "\tconst char **esc;"
+	print "\tconst short *esc;"
 	print "\tshort parent_terminal;"
 	print "\tconst terminal_variant *variant;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {%s{NULL,NULL,-1,NULL}};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s\n{NULL,NULL,-1,NULL}\n};\n", terminals
 	print "\n#endif"
 }

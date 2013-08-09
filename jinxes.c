@@ -61,7 +61,7 @@ static int tty;
 static int initialised;
 static struct termios old_t;
 static const char *terminal;
-static const char **escape_code;
+//static const char **escape_code;
 
 static int winch_fds[2];
 
@@ -90,7 +90,7 @@ int jx_set_terminal(const char *terminal)
 	terminal_map *t = terminals;
 	while (t->name) {
 		if (!strcmp(t->name, terminal)) {
-			escape_code = t->esc;
+			//escape_code = t->esc;
 			return 0;
 		}
 		++t;
