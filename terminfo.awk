@@ -78,9 +78,9 @@ BEGIN {
 
 	if (largest_sameness > (num / 2)) {
 		if (capstrdic[capstr]) {
-			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1,NULL},\n"
+			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1},\n"
 		} else if (largest_sameness == num) {
-			terminals = terminals "{\"" term "\",NULL," parent[largest_j] ","varstrdic[largest_j]"},\n"
+			terminals = terminals "{\"" term "\","varstrdic[largest_j]"," parent[largest_j] "},\n"
 		} else {
 			parent[j] = largest_j - 1
 			varstrdic[j] = term_"_var"
@@ -92,7 +92,7 @@ BEGIN {
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s", varstr
 			print "};"
-			terminals = terminals "{\"" term "\",NULL," (largest_j - 1) ","term_"_var},\n"
+			terminals = terminals "{\"" term "\","term_"_var," (largest_j - 1) "},\n"
 		}
 	} else {
 		#if (!capstrdic[capstr]) {
@@ -101,7 +101,7 @@ BEGIN {
 		printf "%s", capstr
 		print "};"
 		#}
-		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1, NULL},\n"
+		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1},\n"
 	}
 
 	j++
@@ -114,10 +114,9 @@ END {
 	print "};"
 	print "\ntypedef struct {"
 	print "\tconst char *name;"
-	print "\tconst short *esc;"
+	print "\tconst void *esc;"
 	print "\tshort parent_terminal;"
-	print "\tconst terminal_variant *variant;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {\n%s\n{NULL,NULL,-1,NULL}\n};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s\n{NULL,NULL,-1}\n};\n", terminals
 	print "\n#endif"
 }
