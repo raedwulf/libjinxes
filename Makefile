@@ -2,7 +2,7 @@
 
 include config.mk
 
-TERMS := $(shell toe -a | cut -f1 -s | egrep "^(xterm|rxvt|screen|linux|konsole|gnome|putty)")
+TERMS := $(shell toe -a | cut -f1 -s | egrep "^(xterm|rxvt|screen|linux|konsole|gnome|putty)[^+]")
 #TERMS := $(shell toe -a | cut -f1 -s)
 SRC = jinxes.c
 OBJ = $(SRC:.c=.o)

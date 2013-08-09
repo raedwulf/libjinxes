@@ -78,7 +78,7 @@ BEGIN {
 
 	largest_sameness = -1
 	largest_j = -1
-	for (i = 1; i < j - 1; i++) {
+	for (i = 1; i < j; i++) {
 		sameness[i] = 1
 		for (k = 1; k < num; k++) {
 			if (capsv[j,caps[k]] == capsv[i,caps[k]])
@@ -92,9 +92,9 @@ BEGIN {
 
 	if (largest_sameness > (num / 2)) {
 		if (capstrdic[capstr]) {
-			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1},\n"
+			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1} /* "j - 1" */,\n"
 		} else if (largest_sameness == num) {
-			terminals = terminals "{\"" term "\","varstrdic[largest_j]"," parent[largest_j] "},\n"
+			terminals = terminals "{\"" term "\","varstrdic[largest_j]"," parent[largest_j] "} /* "j - 1" */,\n"
 		} else {
 			parent[j] = largest_j - 1
 			varstrdic[j] = term_"_var"
@@ -106,7 +106,7 @@ BEGIN {
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s", varstr
 			print "};"
-			terminals = terminals "{\"" term "\","term_"_var," (largest_j - 1) "},\n"
+			terminals = terminals "{\"" term "\","term_"_var," (largest_j - 1) "} /* "j - 1" */,\n"
 		}
 	} else {
 		#if (!capstrdic[capstr]) {
@@ -115,7 +115,7 @@ BEGIN {
 		printf "%s", capstr
 		print "};"
 		#}
-		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1},\n"
+		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1} /* "j - 1" */,\n"
 	}
 
 	j++
