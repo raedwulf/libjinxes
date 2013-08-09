@@ -25,6 +25,8 @@ BEGIN {
 	FS="="
 	RS=" "
 	esc = 1
+	esc8 = 1
+	esc12 = 1
 }
 
 {
@@ -43,12 +45,24 @@ BEGIN {
 		gsub(/"/, "\\\"")
 		if (caps[$1]) {
 			if (esci[$2])
-				capsv[j,$1] = esci[$2]
+				capsv[j,$1] = esci[$2] - 1
 			else {
-				capsv[j,$1] = esc - 1
-				esci[$2] = esc
-				escp[esc] = $2
-				esc++
+				if (length($2) <= 8) {
+					capsv[j,$1] = esc8 + 4095
+					esci[$2] = esc8 + 4096
+					escp8[esc8] = $2
+					esc8++
+				} else if (length($2) <= 12) {
+					capsv[j,$1] = esc12 + 8191
+					esci[$2] = esc12 + 8192
+					escp12[esc12] = $2
+					esc12++
+				} else {
+					capsv[j,$1] = esc - 1
+					esci[$2] = esc
+					escp[esc] = $2
+					esc++
+				}
 			}
 		}
 	}
@@ -108,9 +122,17 @@ BEGIN {
 }
 
 END {
-	print "\nstatic const char *terminfo_escape_table[] = {"
+	print "\nstatic const char terminfo_short8_escape_table[][8] = {"
+	for (i = 1; i < esc8; i++)
+		print "\""escp8[i]"\"" (i < esc8 - 1 ? "," : "") " /* " esci[escp8[i]] - 1 " */"
+	print "};"
+	print "\nstatic const char terminfo_short12_escape_table[][12] = {"
+	for (i = 1; i < esc12; i++)
+		print "\""escp12[i]"\"" (i < esc12 - 1 ? "," : "") " /* " esci[escp12[i]] - 1 " */"
+	print "};"
+	print "\nstatic const char *terminfo_long_escape_table[] = {"
 	for (i = 1; i < esc; i++)
-		print "\""escp[i]"\"" (i < esc - 1 ? "," : "")
+		print "\""escp[i]"\"" (i < esc - 1 ? "," : "") " /* " esci[escp[i]] - 1 " */"
 	print "};"
 	print "\ntypedef struct {"
 	print "\tconst char *name;"
