@@ -165,15 +165,15 @@ BEGIN {
 }
 
 END {
-	print "\nstatic const char terminfo_short8_escape_table[][8] = {"
+	print "\nstatic const char terminfo_short8_esctable[][8] = {"
 	for (i = 1; i < esc8; i++)
 		print "\""escp8[i]"\"" (i < esc8 - 1 ? "," : "") " /* " esci[escp8[i]] - 1 " */"
 	print "};"
-	print "\nstatic const char terminfo_short12_escape_table[][12] = {"
+	print "\nstatic const char terminfo_short12_esctable[][12] = {"
 	for (i = 1; i < esc12; i++)
 		print "\""escp12[i]"\"" (i < esc12 - 1 ? "," : "") " /* " esci[escp12[i]] - 1 " */"
 	print "};"
-	print "\nstatic const char *terminfo_long_escape_table[] = {"
+	print "\nstatic const char *terminfo_long_esctable[] = {"
 	for (i = 1; i < esc; i++)
 		print "\""escp[i]"\"" (i < esc - 1 ? "," : "") " /* " esci[escp[i]] - 1 " */"
 	print "};"

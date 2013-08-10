@@ -61,7 +61,7 @@ static int tty;
 static int initialised;
 static struct termios old_t;
 static const char *terminal;
-static short escape_code[TI_MAX];
+static const char *escape_code[TI_MAX];
 
 static int winch_fds[2];
 
@@ -89,6 +89,7 @@ int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
 	short term[sizeof(terminals)/sizeof(terminal_map)];
+	short escode[TI_MAX];
 	int i = 0;
 	/* find the terminal */
 	for (; t->name; t++) {
@@ -99,12 +100,24 @@ int jx_set_terminal(const char *terminal)
 			t = terminals + t->parent;
 		}
 		/* copy escape codes from terminal */
-		memcpy(escape_code, t->esc, sizeof(escape_code));
+		memcpy(escode, t->esc, sizeof(escode));
 		/* modify with each success variation */
 		for (i = i-1; i >= 0; i--) {
 			const terminal_variant *tv = terminals[i].esc;
 			for (; tv->location != -1; tv++)
-				escape_code[tv->location] = tv->esc;
+				escode[tv->location] = tv->esc;
+		}
+		/* store pointers to the escape code strings */
+		for (i = 0; i < TI_MAX; i++) {
+			if (escode[i] & (1 << 14))
+				escape_code[i] =
+					terminfo_short8_esctable[i & ~(1<<14)];
+			else if (escode[i] & (1 << 15))
+				escape_code[i] =
+					terminfo_short12_esctable[i & ~(1<<15)];
+			else
+				escape_code[i] =
+					terminfo_long_esctable[i];
 		}
 		return 0;
 	}
