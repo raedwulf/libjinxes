@@ -182,6 +182,6 @@ END {
 	print "\tconst void *esc;"
 	print "\tshort parent;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {\n%s\n{NULL,NULL,-1}\n};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,-1}\n};\n", terminals
 	print "\n#endif"
 }
