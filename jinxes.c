@@ -65,6 +65,23 @@ static const char *escape_code[TI_MAX];
 
 static int winch_fds[2];
 
+/* return string descriptions of errors */
+const char *jx_error(int e)
+{
+	switch (e) {
+		case JX_ERR_FAILED_TO_OPEN_TTY:
+			return "failed to open tty";
+		case JX_ERR_TERMIOS:
+			return "termios error";
+		case JX_ERR_UNSUPPORTED_TERMINAL:
+			return "unsupported terminal";
+		case JX_ERR_PIPE_TRAP_ERROR:
+			return "pipe error";
+		default:
+			return "unknown";
+	}
+}
+
 /* to handle the window change, pipe the size changes to the event handler */
 static void sigwinch_handler(int sig)
 {
@@ -81,8 +98,11 @@ static int init_term()
 	terminal = getenv("TERM");
 	if (!terminal)
 		terminal = "xterm-256color";
-	jx_set_terminal(terminal);
-	return 0;
+
+	/* TODO: fall intelligently to similar terminal
+	 * names/terminfo database*/
+
+	return jx_set_terminal(terminal);
 }
 
 int jx_set_terminal(const char *terminal)

@@ -70,4 +70,7 @@ void jx_blit(int x, int y, int w, int h, const char *text);
 int jx_peek(jx_event *event, int timeout);
 int jx_poll(jx_event *event);
 
+uint32_t jx_version();
+const char *jx_error(int e);
+
 #endif
