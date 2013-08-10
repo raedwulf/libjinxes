@@ -97,6 +97,9 @@ ENTRY_STRING(KEY_LEFT            ,79)
 ENTRY_STRING(KEY_RIGHT           ,83)
 
 #ifdef TERMINFO_STRING
+#if defined(TERMINFO_ENUM)
+TI_MAX
+#endif
 #if defined(TERMINFO_ENUM) || defined(TERMINFO_MAP)
 };
 #endif

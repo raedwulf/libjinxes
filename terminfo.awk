@@ -40,21 +40,64 @@ BEGIN {
 	RS="\n"
 	while (((infocmp term) | getline) > 0) {
 		gsub(/^[ \t]+|[, \t]+$/, "")
-		gsub(/\\/, "\\\\")
-		gsub(/\\\\E/, "\\033")
+		#gsub(/\\/, "\\\\")
+		#gsub(/\\\\E/, "\\033")
+		gsub(/\\E/, "\\033")
 		gsub(/"/, "\\\"")
+		gsub(/\^~/,  "\\000")
+		gsub(/\^2/,  "\\000")
+		gsub(/\^A/,  "\\001")
+		gsub(/\^B/,  "\\002")
+		gsub(/\^C/,  "\\003")
+		gsub(/\^D/,  "\\004")
+		gsub(/\^E/,  "\\005")
+		gsub(/\^F/,  "\\006")
+		gsub(/\^G/,  "\\007")
+		gsub(/\^H/,  "\\010")
+		gsub(/\^I/,  "\\011")
+		gsub(/\^J/,  "\\012")
+		gsub(/\^K/,  "\\013")
+		gsub(/\^L/,  "\\014")
+		gsub(/\^M/,  "\\015")
+		gsub(/\^N/,  "\\016")
+		gsub(/\^O/,  "\\017")
+		gsub(/\^P/,  "\\020")
+		gsub(/\^Q/,  "\\021")
+		gsub(/\^R/,  "\\022")
+		gsub(/\^S/,  "\\023")
+		gsub(/\^T/,  "\\024")
+		gsub(/\^U/,  "\\025")
+		gsub(/\^V/,  "\\026")
+		gsub(/\^W/,  "\\027")
+		gsub(/\^X/,  "\\030")
+		gsub(/\^Y/,  "\\031")
+		gsub(/\^Z/,  "\\032")
+		gsub(/\^\[/, "\\033")
+		gsub(/\^3/,  "\\033")
+		gsub(/\^4/,  "\\034")
+		gsub(/\^\\/, "\\034")
+		gsub(/\^5/,  "\\035")
+		gsub(/\^\]/, "\\035")
+		gsub(/\^6/,  "\\036")
+		gsub(/\^7/,  "\\037")
+		gsub(/\^\//, "\\037")
+		gsub(/\^_/,  "\\037")
+		gsub(/\^8/,  "\\177")
+		gsub(/\\$/,  "\\\\")
 		if (caps[$1]) {
 			if (esci[$2])
 				capsv[j,$1] = esci[$2] - 1
 			else {
 				if (length($2) <= 8) {
-					capsv[j,$1] = esc8 + 4095
-					esci[$2] = esc8 + 4096
+					tbl = 16384
+					capsv[j,$1] = esc8 + tbl - 1
+					esci[$2] = esc8 + tbl
 					escp8[esc8] = $2
 					esc8++
 				} else if (length($2) <= 12) {
-					capsv[j,$1] = esc12 + 8191
-					esci[$2] = esc12 + 8192
+					tbl = 32768
+					capsv[j,$1] = esc12 + tbl - 1
+					esci[$2] = esc12 + tbl
 					escp12[esc12] = $2
 					esc12++
 				} else {
@@ -104,7 +147,7 @@ BEGIN {
 					varstr = varstr "{" (i - 1) "," capsv[j,caps[i]] "},"
 			}
 			printf "static const terminal_variant "term_"_var[] = {"
-			printf "%s", varstr
+			printf "%s{-1,-1}", varstr
 			print "};"
 			terminals = terminals "{\"" term "\","term_"_var," (largest_j - 1) "} /* "j - 1" */,\n"
 		}
@@ -137,7 +180,7 @@ END {
 	print "\ntypedef struct {"
 	print "\tconst char *name;"
 	print "\tconst void *esc;"
-	print "\tshort parent_terminal;"
+	print "\tshort parent;"
 	print "} terminal_map;\n"
 	printf "static terminal_map terminals[] = {\n%s\n{NULL,NULL,-1}\n};\n", terminals
 	print "\n#endif"

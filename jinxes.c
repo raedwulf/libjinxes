@@ -61,7 +61,7 @@ static int tty;
 static int initialised;
 static struct termios old_t;
 static const char *terminal;
-//static const char **escape_code;
+static short escape_code[TI_MAX];
 
 static int winch_fds[2];
 
@@ -88,12 +88,25 @@ static int init_term()
 int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
-	while (t->name) {
-		if (!strcmp(t->name, terminal)) {
-			//escape_code = t->esc;
-			return 0;
+	short term[sizeof(terminals)/sizeof(terminal_map)];
+	int i = 0;
+	/* find the terminal */
+	for (; t->name; t++) {
+		if (strcmp(t->name, terminal)) continue;
+		/* find the parent terminal */
+		while (t->parent != -1) {
+			term[i++] = terminals - t;
+			t = terminals + t->parent;
 		}
-		++t;
+		/* copy escape codes from terminal */
+		memcpy(escape_code, t->esc, sizeof(escape_code));
+		/* modify with each success variation */
+		for (i = i-1; i >= 0; i--) {
+			const terminal_variant *tv = terminals[i].esc;
+			for (; tv->location != -1; tv++)
+				escape_code[tv->location] = tv->esc;
+		}
+		return 0;
 	}
 	return -1;
 }
