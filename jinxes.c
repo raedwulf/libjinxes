@@ -146,7 +146,7 @@ int jx_set_terminal(const char *terminal)
 
 int jx_init()
 {
-	if ((tty = open("/dev/tty", O_RDWR)))
+	if (!(tty = open("/dev/tty", O_RDWR)))
 		return JX_ERR_FAILED_TO_OPEN_TTY;
 
 	if (init_term()) {
@@ -154,7 +154,7 @@ int jx_init()
 		return JX_ERR_UNSUPPORTED_TERMINAL;
 	}
 
-	if (!pipe(winch_fds)) {
+	if (pipe(winch_fds)) {
 		close(tty);
 		return JX_ERR_PIPE_TRAP_ERROR;
 	}
@@ -164,14 +164,14 @@ int jx_init()
 	sa.sa_flags = 0;
 	sa.sa_handler = sigwinch_handler;
 
-	if (!tcgetattr(tty, &old_t))
+	if (tcgetattr(tty, &old_t))
 		return JX_ERR_TERMIOS;
 
 	struct termios t = old_t;
 	cfmakeraw(&t);
 	t.c_cc[VMIN] = 0;
 	t.c_cc[VTIME] = 0;
-	if (!tcsetattr(tty, TCSAFLUSH, &t))
+	if (tcsetattr(tty, TCSAFLUSH, &t))
 		return JX_ERR_TERMIOS;
 
 	return JX_SUCCESS;
