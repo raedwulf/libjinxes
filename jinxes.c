@@ -162,6 +162,7 @@ int jx_set_terminal(const char *terminal)
 	return -1;
 }
 
+/* function that initialises the library and sets up the terminal */
 int jx_init()
 {
 	if (!(tty = open("/dev/tty", O_RDWR)))
@@ -195,8 +196,12 @@ int jx_init()
 	return JX_SUCCESS;
 }
 
+/* function that finalises everything */
 void jx_end()
 {
+	/* restore terminal settings */
+	if (tcsetattr(tty, TCSAFLUSH, &old_t))
+		return JX_ERR_TERMIOS;
 	close(tty);
 	close(winch_fds[0]);
 	close(winch_fds[1]);
