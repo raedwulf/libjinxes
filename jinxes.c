@@ -23,6 +23,12 @@
 #undef TERMINFO_ENUM
 #undef TERMINFO_BOOLEAN
 
+#define TERMINFO_NUMBER
+#define TERMINFO_ENUM
+#include "terminfo.h"
+#undef TERMINFO_ENUM
+#undef TERMINFO_NUMBER
+
 #define TERMINFO_STRING
 #define TERMINFO_ENUM
 #include "terminfo.h"
@@ -120,7 +126,7 @@ static bool has_bool(terminfo_boolean b)
 	else return (ttm->caps & (1 << b));
 }
 
-/* set the terminal */
+/* function that sets the passed terminal */
 int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
@@ -139,7 +145,7 @@ int jx_set_terminal(const char *terminal)
 		}
 		/* copy escape codes from terminal */
 		memcpy(escode, t->esc, sizeof(escode));
-		/* modify with each success variation */
+		/* modify with each successive variation */
 		for (i = i-1; i >= 0; i--) {
 			const terminal_variant *tv = terminals[i].esc;
 			for (; tv->location != -1; tv++)
