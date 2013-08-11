@@ -44,6 +44,9 @@
 #define ENTRY_STRING(x,i)
 #endif
 
+/* supported terminal extensions */
+/* taken from ncurses' term.h */
+
 #ifdef TERMINFO_BOOLEAN
 #ifdef TERMINFO_ENUM
 typedef enum {
@@ -98,9 +101,6 @@ typedef enum {
 static int terminfo_map_string[] = {
 #endif
 #endif
-
-/* supported terminal extensions */
-/* taken from ncurses' term.h */
 
 /* functions */
 ENTRY_STRING(CLEAR_SCREEN        ,5 )
