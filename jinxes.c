@@ -16,6 +16,12 @@
 
 #include "config.h"
 
+#define TERMINFO_BOOLEAN
+#define TERMINFO_ENUM
+#include "terminfo.h"
+#undef TERMINFO_ENUM
+#undef TERMINFO_BOOLEAN
+
 #define TERMINFO_STRING
 #define TERMINFO_ENUM
 #include "terminfo.h"

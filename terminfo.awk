@@ -3,19 +3,29 @@
 BEGIN {
 	template = "terminfo.def.h"
 	infocmp = "infocmp -L -1 "
-        termcaps = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_STRING " template
+        termbool = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_BOOLEAN " template
+        termstrs = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_STRING " template
 
 	while ((getline < template) > 0)
 		print $0
 
 	i = 1
 	j = 1
-	while ((termcaps | getline) > 0)
+	while ((termstrs | getline) > 0)
 		if ($1 != "" && $1 != "#") {
-			caps[tolower($1)] = i
-			caps[i++] = tolower($1)
+			strs[tolower($1)] = i
+			strs[i++] = tolower($1)
 		}
 	num = i
+
+	i = 1
+	while ((termbool | getline) > 0)
+		if ($1 != "" && $1 != "#") {
+			bool[tolower($1)] = i
+			bool[i++] = tolower($1)
+		}
+	numb = i
+
 
 	print "\n#ifdef TERMINFO_ESCAPE_CODES\n"
 	print "\ntypedef struct {"
@@ -38,6 +48,8 @@ BEGIN {
 	gsub(/\+/,"x",term_)
 	gsub(/\./,"_",term_)
 	RS="\n"
+	caps = 0
+	caps_ = 0
 	while (((infocmp term) | getline) > 0) {
 		gsub(/^[ \t]+|[, \t]+$/, "")
 		#gsub(/\\/, "\\\\")
@@ -84,47 +96,54 @@ BEGIN {
 		gsub(/\^_/,  "\\037")
 		gsub(/\^8/,  "\\177")
 		gsub(/\\$/,  "\\\\")
-		if (caps[$1]) {
+		if (strs[$1]) {
 			if (esci[$2])
-				capsv[j,$1] = esci[$2] - 1
+				strsv[j,$1] = esci[$2] - 1
 			else {
 				if (length($2) <= 8) {
 					tbl = 16384
-					capsv[j,$1] = esc8 + tbl - 1
+					strsv[j,$1] = esc8 + tbl - 1
 					esci[$2] = esc8 + tbl
 					escp8[esc8] = $2
 					esc8++
 				} else if (length($2) <= 12) {
 					tbl = 32768
-					capsv[j,$1] = esc12 + tbl - 1
+					strsv[j,$1] = esc12 + tbl - 1
 					esci[$2] = esc12 + tbl
 					escp12[esc12] = $2
 					esc12++
 				} else {
-					capsv[j,$1] = esc - 1
+					strsv[j,$1] = esc - 1
 					esci[$2] = esc
 					escp[esc] = $2
 					esc++
 				}
 			}
 		}
+		if (bool[$1]) {
+			if (bool[$1] <= 32) {
+				caps += (2 ^ bool[$1])
+			} else {
+				caps_ += (2 ^ (bool[$1] - 32))
+			}
+		}
 	}
 	for (i = 1; i < num; i++) {
-		if (!capsv[j,caps[i]]) capsv[j,caps[i]] = -1
+		if (!strsv[j,strs[i]]) strsv[j,strs[i]] = -1
 	}
 	RS=" "
 	close (infocmp)
 
-	capstr = ""
+	strstr = ""
 	for (i = 1; i < num; i++)
-		capstr = capstr capsv[j,caps[i]] (i == num - 1 ? "" : ",")
+		strstr = strstr strsv[j,strs[i]] (i == num - 1 ? "" : ",")
 
 	largest_sameness = -1
 	largest_j = -1
 	for (i = 1; i < j; i++) {
 		sameness[i] = 1
 		for (k = 1; k < num; k++) {
-			if (capsv[j,caps[k]] == capsv[i,caps[k]])
+			if (strsv[j,strs[k]] == strsv[i,strs[k]])
 				sameness[i]++;
 		}
 		if (sameness[i] > largest_sameness) {
@@ -134,31 +153,31 @@ BEGIN {
 	}
 
 	if (largest_sameness > (num / 2)) {
-		if (capstrdic[capstr]) {
-			terminals = terminals "{\"" term "\","capstrdic[capstr]",-1} /* "j - 1" */,\n"
+		if (strstrdic[strstr]) {
+			terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_",-1} /* "j - 1" */,\n"
 		} else if (largest_sameness == num) {
-			terminals = terminals "{\"" term "\","varstrdic[largest_j]"," parent[largest_j] "} /* "j - 1" */,\n"
+			terminals = terminals "{\"" term "\","varstrdic[largest_j]","caps","caps_","parent[largest_j] "} /* "j - 1" */,\n"
 		} else {
 			parent[j] = largest_j - 1
 			varstrdic[j] = term_"_var"
 			varstr = ""
 			for (i = 1; i < num; i++) {
-				if (capsv[j,caps[i]] != capsv[largest_j,caps[i]])
-					varstr = varstr "{" (i - 1) "," capsv[j,caps[i]] "},"
+				if (strsv[j,strs[i]] != strsv[largest_j,strs[i]])
+					varstr = varstr "{" (i - 1) "," strsv[j,strs[i]] "},"
 			}
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s{-1,-1}", varstr
 			print "};"
-			terminals = terminals "{\"" term "\","term_"_var," (largest_j - 1) "} /* "j - 1" */,\n"
+			terminals = terminals "{\"" term "\","term_"_var,"caps","caps_"," (largest_j - 1) "} /* "j - 1" */,\n"
 		}
 	} else {
-		#if (!capstrdic[capstr]) {
-		capstrdic[capstr] = term_"_esc"
+		#if (!strstrdic[strstr]) {
+		strstrdic[strstr] = term_"_esc"
 		printf "static const short "term_"_esc[] = {"
-		printf "%s", capstr
+		printf "%s", strstr
 		print "};"
 		#}
-		terminals = terminals "{\"" term "\","capstrdic[capstr]", -1} /* "j - 1" */,\n"
+		terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_",-1} /* "j - 1" */,\n"
 	}
 
 	j++
@@ -180,8 +199,10 @@ END {
 	print "\ntypedef struct {"
 	print "\tconst char *name;"
 	print "\tconst void *esc;"
+	print "\tunsigned int caps;"
+	print "\tunsigned char caps_;"
 	print "\tshort parent;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,-1}\n};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,0,0-1}\n};\n", terminals
 	print "\n#endif"
 }
