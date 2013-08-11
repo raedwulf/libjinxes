@@ -21,7 +21,7 @@ BEGIN {
 	i = 1
 	while ((termbool | getline) > 0)
 		if ($1 != "" && $1 != "#") {
-			bool[tolower($1)] = i
+			bool[tolower($1)] = i + 1
 			bool[i++] = tolower($1)
 		}
 	numb = i
@@ -95,6 +95,7 @@ BEGIN {
 		gsub(/\^\//, "\\037")
 		gsub(/\^_/,  "\\037")
 		gsub(/\^8/,  "\\177")
+		gsub(/\\\$/,  "\\\\$")
 		gsub(/\\$/,  "\\\\")
 		if (strs[$1]) {
 			if (esci[$2])
@@ -122,12 +123,15 @@ BEGIN {
 		}
 		if (bool[$1]) {
 			if (bool[$1] <= 32) {
-				caps += (2 ^ bool[$1])
+				caps += (2 ^ (bool[$1]-1))
 			} else {
-				caps_ += (2 ^ (bool[$1] - 32))
+				caps_ += (2 ^ ((bool[$1]-1) - 32))
 			}
 		}
 	}
+
+	caps = caps"u"
+
 	for (i = 1; i < num; i++) {
 		if (!strsv[j,strs[i]]) strsv[j,strs[i]] = -1
 	}
@@ -203,6 +207,6 @@ END {
 	print "\tunsigned char caps_;"
 	print "\tshort parent;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,0,0-1}\n};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,0,0,-1}\n};\n", terminals
 	print "\n#endif"
 }

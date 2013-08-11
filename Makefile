@@ -2,8 +2,8 @@
 
 include config.mk
 
-#TERMS := $(shell toe -a | cut -f1 -s | egrep "^(xterm|rxvt|screen|linux|konsole|gnome|putty)[^+]")
-TERMS := $(shell toe -a | cut -f1 -s | egrep "^[a-zA-Z0-9_-]+$$")
+TERMS := $(shell toe -a | cut -f1 -s | egrep "^(xterm|rxvt|screen|linux|konsole|gnome|putty)[^+]")
+#TERMS := $(shell toe -a | cut -f1 -s | grep "^[a-zA-Z0-9_-]\+ *$$")
 SRC = jinxes.c
 OBJ = $(SRC:.c=.o)
 

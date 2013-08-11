@@ -7,6 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -66,6 +67,7 @@ static inline cfmakeraw(struct termios *termios)
 static int tty;
 static int initialised;
 static struct termios old_t;
+static const terminal_map *ttm;
 static const char *terminal;
 static const char *escape_code[TI_MAX];
 
@@ -111,6 +113,14 @@ static int init_term()
 	return jx_set_terminal(terminal);
 }
 
+/* check if terminal has capability */
+static bool has_bool(terminfo_boolean b)
+{
+	if (b >= 32) return (ttm->caps_ & (1 << (b - 32)));
+	else return (ttm->caps & (1 << b));
+}
+
+/* set the terminal */
 int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
@@ -120,6 +130,8 @@ int jx_set_terminal(const char *terminal)
 	/* find the terminal */
 	for (; t->name; t++) {
 		if (strcmp(t->name, terminal)) continue;
+		/* save the target terminal */
+		ttm = t;
 		/* find the parent terminal */
 		while (t->parent != -1) {
 			term[i++] = terminals - t;

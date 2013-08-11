@@ -46,7 +46,7 @@
 
 #ifdef TERMINFO_BOOLEAN
 #ifdef TERMINFO_ENUM
-enum terminfo_boolean {
+typedef enum {
 #endif
 ENTRY_BOOLEAN(AUTO_LEFT_MARGIN, 0)
 ENTRY_BOOLEAN(AUTO_RIGHT_MARGIN, 1)
@@ -86,13 +86,13 @@ ENTRY_BOOLEAN(SEMI_AUTO_RIGHT_MARGIN, 34)
 ENTRY_BOOLEAN(CPI_CHANGES_RES, 35)
 ENTRY_BOOLEAN(LPI_CHANGES_RES, 36)
 #ifdef TERMINFO_ENUM
-};
+} terminfo_boolean;
 #endif
 #endif
 
 #ifdef TERMINFO_STRING
 #ifdef TERMINFO_ENUM
-enum terminfo_string {
+typedef enum {
 #endif
 #ifdef TERMINFO_MAP
 static int terminfo_map_string[] = {
@@ -140,10 +140,13 @@ ENTRY_STRING(KEY_LEFT            ,79)
 ENTRY_STRING(KEY_RIGHT           ,83)
 
 #ifdef TERMINFO_STRING
-#if defined(TERMINFO_ENUM)
+#ifdef TERMINFO_ENUM
 TI_MAX
 #endif
-#if defined(TERMINFO_ENUM) || defined(TERMINFO_MAP)
+#ifdef TERMINFO_ENUM
+} terminfo_string;
+#endif
+#ifdef TERMINFO_MAP
 };
 #endif
 #endif
