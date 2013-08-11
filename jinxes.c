@@ -200,8 +200,7 @@ int jx_init()
 void jx_end()
 {
 	/* restore terminal settings */
-	if (tcsetattr(tty, TCSAFLUSH, &old_t))
-		return JX_ERR_TERMIOS;
+	tcsetattr(tty, TCSAFLUSH, &old_t);
 	close(tty);
 	close(winch_fds[0]);
 	close(winch_fds[1]);
