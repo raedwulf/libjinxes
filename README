@@ -8,3 +8,15 @@ Rationale
 
 The reason for the revival is termbox's use of waf as a build system and
 the potential for something even simpler than termbox.
+
+Upcoming Features
+-----------------
+
+* Does not depend on the ncurses' terminfo database but has compile time
+  configuration to be able to generate the required terminfo data from
+  the terminfo database.
+
+Planned Features
+----------------
+
+* Fallback to the terminfo database if the terminfo is not compiled in.
