@@ -38,7 +38,7 @@ BEGIN {
 	print "\n#ifdef TERMINFO_ESCAPE_CODES\n"
 	print "\ntypedef struct {"
 	print "\tshort location;"
-	print "\tshort esc;"
+	print "\tunsigned short esc;"
 	print "} terminal_variant;"
 	FS="="
 	RS=" "
@@ -194,7 +194,7 @@ BEGIN {
 	} else {
 		#if (!strstrdic[strstr]) {
 		strstrdic[strstr] = term_"_esc"
-		printf "static const short "term_"_esc[] = {"
+		printf "static const unsigned short "term_"_esc[] = {"
 		printf "%s", strstr
 		print "};"
 		#}

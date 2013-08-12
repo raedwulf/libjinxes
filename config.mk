@@ -2,9 +2,7 @@
 
 PREFIX = /usr/local
 
-UNICODE = 6.1.0
-
-CFLAGS  = -std=c99 -pedantic -Os -Wall -Wextra
+CFLAGS  = -std=gnu99 -pedantic -Wall -Wextra
 LDFLAGS = -s
 
 CC  = cc

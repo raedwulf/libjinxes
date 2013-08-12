@@ -144,14 +144,14 @@ int jx_set_terminal(const char *terminal)
 		ttm = t;
 		/* find the parent terminal */
 		while (t->parent != -1) {
-			term[i++] = terminals - t;
+			term[i++] = t - terminals;
 			t = terminals + t->parent;
 		}
 		/* copy escape codes from terminal */
 		memcpy(escode, t->esc, sizeof(escode));
 		/* modify with each successive variation */
 		for (i = i-1; i >= 0; i--) {
-			const terminal_variant *tv = terminals[i].esc;
+			const terminal_variant *tv = terminals[term[i]].esc;
 			for (; tv->location != -1; tv++)
 				escode[tv->location] = tv->esc;
 		}
