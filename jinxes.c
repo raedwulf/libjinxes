@@ -73,7 +73,7 @@ static inline cfmakeraw(struct termios *termios)
 
 /* jinxes static state variables */
 static int tty;
-static int initialised;
+static bool initialised;
 static struct termios old_t;
 static const terminal_map *ttm;
 static const char *terminal;
@@ -85,6 +85,8 @@ static int winch_fds[2];
 const char *jx_error(int e)
 {
 	switch (e) {
+		case JX_ERR_NOT_INIT:
+			return "terminal has not been initialised";
 		case JX_ERR_FAILED_TO_OPEN_TTY:
 			return "failed to open tty";
 		case JX_ERR_TERMIOS:
@@ -201,15 +203,20 @@ int jx_init()
 	if (tcsetattr(tty, TCSAFLUSH, &t))
 		return JX_ERR_TERMIOS;
 
+	initialised = true;
+
 	return JX_SUCCESS;
 }
 
 /* function that finalises everything */
 void jx_end()
 {
-	/* restore terminal settings */
-	tcsetattr(tty, TCSAFLUSH, &old_t);
-	close(tty);
-	close(winch_fds[0]);
-	close(winch_fds[1]);
+	if (initialised) {
+		/* restore terminal settings */
+		tcsetattr(tty, TCSAFLUSH, &old_t);
+		close(tty);
+		close(winch_fds[0]);
+		close(winch_fds[1]);
+		initialised = false;
+	}
 }
