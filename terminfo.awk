@@ -5,6 +5,7 @@ BEGIN {
 	infocmp = "infocmp -L -1 "
         termbool = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_BOOLEAN " template
         termstrs = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_STRING " template
+        termnums = "cpp -DTERMINFO_RAW_NAMES -DTERMINFO_NUMBER " template
 
 	while ((getline < template) > 0)
 		print $0
@@ -26,6 +27,13 @@ BEGIN {
 		}
 	numb = i
 
+	i = 1
+	while ((termnums | getline) > 0)
+		if ($1 != "" && $1 != "#") {
+			nu[tolower($1)] = i + 1
+			nu[i++] = tolower($1)
+		}
+	numn = i
 
 	print "\n#ifdef TERMINFO_ESCAPE_CODES\n"
 	print "\ntypedef struct {"
@@ -128,7 +136,16 @@ BEGIN {
 				caps_ += (2 ^ ((bool[$1]-1) - 32))
 			}
 		}
+		split($1,n,"#")
+		if (nu[n[1]]) nuv[nu[n[1]]] = n[2]
 	}
+
+	nus = ""
+	for (i = 1; i < numn; i++) {
+		if (nuv[i]) nus = nus nuv[i] ","
+		else nus = nus "0,"
+	}
+	nus = "{" nus "}"
 
 	caps = caps"u"
 
@@ -158,9 +175,9 @@ BEGIN {
 
 	if (largest_sameness > (num / 2)) {
 		if (strstrdic[strstr]) {
-			terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_",-1} /* "j - 1" */,\n"
+			terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_","nus",-1} /* "j - 1" */,\n"
 		} else if (largest_sameness == num) {
-			terminals = terminals "{\"" term "\","varstrdic[largest_j]","caps","caps_","parent[largest_j] "} /* "j - 1" */,\n"
+			terminals = terminals "{\"" term "\","varstrdic[largest_j]","caps","caps_","nus","parent[largest_j] "} /* "j - 1" */,\n"
 		} else {
 			parent[j] = largest_j - 1
 			varstrdic[j] = term_"_var"
@@ -172,7 +189,7 @@ BEGIN {
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s{-1,-1}", varstr
 			print "};"
-			terminals = terminals "{\"" term "\","term_"_var,"caps","caps_"," (largest_j - 1) "} /* "j - 1" */,\n"
+			terminals = terminals "{\"" term "\","term_"_var,"caps","caps_","nus"," (largest_j - 1) "} /* "j - 1" */,\n"
 		}
 	} else {
 		#if (!strstrdic[strstr]) {
@@ -181,13 +198,15 @@ BEGIN {
 		printf "%s", strstr
 		print "};"
 		#}
-		terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_",-1} /* "j - 1" */,\n"
+		terminals = terminals "{\"" term "\","strstrdic[strstr]","caps","caps_","nus",-1} /* "j - 1" */,\n"
 	}
 
 	j++
 }
 
 END {
+	for (i = 1; i < numn; i++)
+		nzero = nzero "0,"
 	print "\nstatic const char terminfo_short8_esctable[][8] = {"
 	for (i = 1; i < esc8; i++)
 		print "\""escp8[i]"\"" (i < esc8 - 1 ? "," : "") " /* " esci[escp8[i]] - 1 " */"
@@ -205,8 +224,9 @@ END {
 	print "\tconst void *esc;"
 	print "\tunsigned int caps;"
 	print "\tunsigned char caps_;"
+	print "\tshort capsn[TN_MAX];"
 	print "\tshort parent;"
 	print "} terminal_map;\n"
-	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,0,0,-1}\n};\n", terminals
+	printf "static terminal_map terminals[] = {\n%s{NULL,NULL,0,0,{"nzero"},-1}\n};\n", terminals
 	print "\n#endif"
 }

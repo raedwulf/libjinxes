@@ -27,13 +27,15 @@
 #define TERMINFO_ENUM
 #include "terminfo.h"
 #undef TERMINFO_ENUM
+#define TERMINFO_MAP
+#include "terminfo.h"
+#undef TERMINFO_MAP
 #undef TERMINFO_NUMBER
 
 #define TERMINFO_STRING
 #define TERMINFO_ENUM
 #include "terminfo.h"
 #undef TERMINFO_ENUM
-
 #define TERMINFO_MAP
 #include "terminfo.h"
 #undef TERMINFO_MAP
@@ -75,7 +77,7 @@ static int initialised;
 static struct termios old_t;
 static const terminal_map *ttm;
 static const char *terminal;
-static const char *escape_code[TI_MAX];
+static const char *escape_code[TS_MAX];
 
 static int winch_fds[2];
 
@@ -131,7 +133,7 @@ int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
 	short term[sizeof(terminals)/sizeof(terminal_map)];
-	short escode[TI_MAX];
+	short escode[TS_MAX];
 	int i = 0;
 	/* find the terminal */
 	for (; t->name; t++) {
@@ -152,7 +154,7 @@ int jx_set_terminal(const char *terminal)
 				escode[tv->location] = tv->esc;
 		}
 		/* store pointers to the escape code strings */
-		for (i = 0; i < TI_MAX; i++) {
+		for (i = 0; i < TS_MAX; i++) {
 			if (escode[i] & (1 << 14))
 				escape_code[i] =
 					terminfo_short8_esctable[i & ~(1<<14)];

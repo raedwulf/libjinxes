@@ -23,7 +23,7 @@ jinxestest: jinxestest.o $(LIB)
 
 ${OBJ}: config.h config.mk terminfo.h
 
-terminfo.h: terminfo.def.h
+terminfo.h: terminfo.def.h terminfo.awk
 	echo $(TERMS) | awk -f terminfo.awk > $@
 
 config.h:
