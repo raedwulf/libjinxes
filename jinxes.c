@@ -75,11 +75,53 @@ static inline cfmakeraw(struct termios *termios)
 static int tty;
 static bool initialised;
 static struct termios old_t;
+static int winch_fds[2];
+
 static const terminal_map *ttm;
 static const char *terminal;
 static const char *escape_code[TS_MAX];
+static int escape_code_len[TS_MAX];
 
-static int winch_fds[2];
+static char buf_INput[MAX_INPUT_BUFFER];
+static int buf_INput_i;
+static char buf_OUTput[MAX_OUTPUT_BUFFER];
+static int buf_OUTput_i;
+
+void debug_print(char* buffer, int l)
+{
+	const char *esc_char= "\a\b\f\n\r\t\v\\";
+	const char *essc_str= "abfnrtv\\";
+	char* dest = malloc(l*4 + 1), *p = dest;
+	for(int i = 0; i < l; i++) {
+		int j = 0;
+		for(; j < (int)sizeof(esc_char); j++) {
+			if (buffer[i] == esc_char[j]) {
+				*p++ = '\\';
+				*p++ = essc_str[j];
+				break;
+			}
+		}
+		if (buffer[i] < 32) {
+			snprintf(p, 4, "\\0%02o", buffer[i]);
+			p += 4;
+		} else if (j == sizeof(esc_char))
+			*p++ = buffer[i];
+	}
+	*p='\0';
+	fputs(dest, stderr);
+	free(dest);
+}
+
+#define BUF_PUT(b,x) memcpy(buf_##b##put + buf_##b##put_i, \
+		escape_code[x], escape_code_len[x]), \
+	buf_##b##put_i += escape_code_len[x]
+#define BUF_RESET(b) buf_##b##put_i = 0
+#define BUF_FLUSHIF(b) if (buf_##b##put_i > MAX_##b##PUT_FLUSH) \
+	write(tty, buf_##b##put, buf_##b##put_i -= buf_##b##put_i), \
+	buf_##b##put_i = 0
+#define BUF_FLUSH(b) write(tty, buf_##b##put, \
+	buf_##b##put_i -= buf_##b##put_i), buf_##b##put_i = 0
+#define BUF_DEBUG(b) debug_print(buf_##b##put, buf_##b##put_i)
 
 /* return string descriptions of errors */
 const char *jx_error(int e)
@@ -166,6 +208,7 @@ int jx_set_terminal(const char *terminal)
 			else
 				escape_code[i] =
 					terminfo_long_esctable[i];
+			escape_code_len[i] = strlen(escape_code[i]);
 		}
 		return 0;
 	}
@@ -203,6 +246,13 @@ int jx_init()
 	if (tcsetattr(tty, TCSAFLUSH, &t))
 		return JX_ERR_TERMIOS;
 
+	BUF_PUT(OUT, TS_ENTER_CA_MODE);
+	BUF_PUT(OUT, TS_KEYPAD_XMIT);
+	BUF_PUT(OUT, TS_CURSOR_INVISIBLE);
+	BUF_PUT(OUT, TS_CLEAR_SCREEN);
+	BUF_DEBUG(OUT);
+	BUF_FLUSH(OUT);
+
 	initialised = true;
 
 	return JX_SUCCESS;
@@ -212,6 +262,13 @@ int jx_init()
 void jx_end()
 {
 	if (initialised) {
+		/* clear the screen and restore mode */
+		BUF_PUT(OUT, TS_CURSOR_NORMAL);
+		BUF_PUT(OUT, TS_EXIT_ATTRIBUTE_MODE);
+		BUF_PUT(OUT, TS_CLEAR_SCREEN);
+		BUF_PUT(OUT, TS_KEYPAD_LOCAL);
+		BUF_PUT(OUT, TS_EXIT_CA_MODE);
+		BUF_FLUSH(OUT);
 		/* restore terminal settings */
 		tcsetattr(tty, TCSAFLUSH, &old_t);
 		close(tty);
