@@ -102,7 +102,7 @@ void debug_print(char* buffer, int l)
 			}
 		}
 		if (buffer[i] < 32) {
-			snprintf(p, 4, "\\0%02o", buffer[i]);
+			snprintf(p, 5, "\\%03o", buffer[i]);
 			p += 4;
 		} else if (j == sizeof(esc_char))
 			*p++ = buffer[i];
@@ -112,9 +112,11 @@ void debug_print(char* buffer, int l)
 	free(dest);
 }
 
-#define BUF_PUT(b,x) memcpy(buf_##b##put + buf_##b##put_i, \
-		escape_code[x], escape_code_len[x]), \
-	buf_##b##put_i += escape_code_len[x]
+#define SCLEN(x) x,sizeof(x)
+#define BUF_PUTC(b,x) buf_##b##put[buf_##b##put_i++] = x
+#define BUF_PUT(b,x,l) memcpy(buf_##b##put + buf_##b##put_i, x, l), \
+	buf_##b##put_i += l
+#define BUF_PUTE(b,x) BUF_PUT(b, escape_code[x], escape_code_len[x])
 #define BUF_RESET(b) buf_##b##put_i = 0
 #define BUF_FLUSHIF(b) if (buf_##b##put_i > MAX_##b##PUT_FLUSH) \
 	write(tty, buf_##b##put, buf_##b##put_i -= buf_##b##put_i), \
@@ -246,10 +248,10 @@ int jx_init()
 	if (tcsetattr(tty, TCSAFLUSH, &t))
 		return JX_ERR_TERMIOS;
 
-	BUF_PUT(OUT, TS_ENTER_CA_MODE);
-	BUF_PUT(OUT, TS_KEYPAD_XMIT);
-	BUF_PUT(OUT, TS_CURSOR_INVISIBLE);
-	BUF_PUT(OUT, TS_CLEAR_SCREEN);
+	BUF_PUTE(OUT, TS_ENTER_CA_MODE);
+	BUF_PUTE(OUT, TS_KEYPAD_XMIT);
+	BUF_PUTE(OUT, TS_CURSOR_INVISIBLE);
+	BUF_PUTE(OUT, TS_CLEAR_SCREEN);
 	BUF_DEBUG(OUT);
 	BUF_FLUSH(OUT);
 
@@ -263,11 +265,11 @@ void jx_end()
 {
 	if (initialised) {
 		/* clear the screen and restore mode */
-		BUF_PUT(OUT, TS_CURSOR_NORMAL);
-		BUF_PUT(OUT, TS_EXIT_ATTRIBUTE_MODE);
-		BUF_PUT(OUT, TS_CLEAR_SCREEN);
-		BUF_PUT(OUT, TS_KEYPAD_LOCAL);
-		BUF_PUT(OUT, TS_EXIT_CA_MODE);
+		BUF_PUTE(OUT, TS_CURSOR_NORMAL);
+		BUF_PUTE(OUT, TS_EXIT_ATTRIBUTE_MODE);
+		BUF_PUTE(OUT, TS_CLEAR_SCREEN);
+		BUF_PUTE(OUT, TS_KEYPAD_LOCAL);
+		BUF_PUTE(OUT, TS_EXIT_CA_MODE);
 		BUF_FLUSH(OUT);
 		/* restore terminal settings */
 		tcsetattr(tty, TCSAFLUSH, &old_t);
