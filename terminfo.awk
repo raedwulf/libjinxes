@@ -107,22 +107,22 @@ BEGIN {
 		gsub(/\\$/,  "\\\\")
 		if (strs[$1]) {
 			if (esci[$2])
-				strsv[j,$1] = esci[$2] - 1
+				strsv[j,$1] = esci[$2]
 			else {
 				if (length($2) <= 8) {
 					tbl = 16384
-					strsv[j,$1] = esc8 + tbl - 1
+					strsv[j,$1] = esc8 + tbl
 					esci[$2] = esc8 + tbl
 					escp8[esc8] = $2
 					esc8++
 				} else if (length($2) <= 12) {
 					tbl = 32768
-					strsv[j,$1] = esc12 + tbl - 1
+					strsv[j,$1] = esc12 + tbl
 					esci[$2] = esc12 + tbl
 					escp12[esc12] = $2
 					esc12++
 				} else {
-					strsv[j,$1] = esc - 1
+					strsv[j,$1] = esc
 					esci[$2] = esc
 					escp[esc] = $2
 					esc++
@@ -139,6 +139,8 @@ BEGIN {
 		split($1,n,"#")
 		if (nu[n[1]]) nuv[nu[n[1]]] = n[2]
 	}
+	RS=" "
+	close (infocmp)
 
 	nus = ""
 	for (i = 1; i < numn; i++) {
@@ -152,12 +154,10 @@ BEGIN {
 	for (i = 1; i < num; i++) {
 		if (!strsv[j,strs[i]]) strsv[j,strs[i]] = -1
 	}
-	RS=" "
-	close (infocmp)
 
 	strstr = ""
 	for (i = 1; i < num; i++)
-		strstr = strstr strsv[j,strs[i]] (i == num - 1 ? "" : ",")
+		strstr = strstr strsv[j,strs[i]]-1 (i == num - 1 ? "" : ",")
 
 	largest_sameness = -1
 	largest_j = -1
@@ -184,7 +184,7 @@ BEGIN {
 			varstr = ""
 			for (i = 1; i < num; i++) {
 				if (strsv[j,strs[i]] != strsv[largest_j,strs[i]])
-					varstr = varstr "{" (i - 1) "," strsv[j,strs[i]] "},"
+					varstr = varstr "{" (i - 1) "," strsv[j,strs[i]]-1 "},"
 			}
 			printf "static const terminal_variant "term_"_var[] = {"
 			printf "%s{-1,-1}", varstr

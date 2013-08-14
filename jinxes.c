@@ -179,7 +179,7 @@ int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
 	short term[sizeof(terminals)/sizeof(terminal_map)];
-	short escode[TS_MAX];
+	unsigned short escode[TS_MAX];
 	int i = 0;
 	/* find the terminal */
 	for (; t->name; t++) {
@@ -203,13 +203,13 @@ int jx_set_terminal(const char *terminal)
 		for (i = 0; i < TS_MAX; i++) {
 			if (escode[i] & (1 << 14))
 				escape_code[i] =
-					terminfo_short8_esctable[i & ~(1<<14)];
+					terminfo_short8_esctable[escode[i] & ~(1<<14)];
 			else if (escode[i] & (1 << 15))
 				escape_code[i] =
-					terminfo_short12_esctable[i & ~(1<<15)];
+					terminfo_short12_esctable[escode[i] & ~(1<<15)];
 			else
 				escape_code[i] =
-					terminfo_long_esctable[i];
+					terminfo_long_esctable[escode[i]];
 			escape_code_len[i] = strlen(escape_code[i]);
 		}
 		return 0;
