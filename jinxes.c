@@ -182,7 +182,7 @@ static bool has_bool(terminfo_boolean b)
 int jx_init()
 {
 	if (!(tty = open("/dev/tty", O_RDWR)))
-		return JX_ERR_FAILED_TO_OPEN_TTY;
+		return JX_ERR_OPEN_TTY;
 
 	if (init_term()) {
 		close(tty);
