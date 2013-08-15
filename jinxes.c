@@ -133,7 +133,7 @@ const char *jx_error(int e)
 	switch (e) {
 		case JX_ERR_NOT_INIT:
 			return "terminal has not been initialised";
-		case JX_ERR_FAILED_TO_OPEN_TTY:
+		case JX_ERR_OPEN_TTY:
 			return "failed to open tty";
 		case JX_ERR_WINDOW_SIZE:
 			return "failed to set window size";
