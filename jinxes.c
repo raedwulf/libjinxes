@@ -178,49 +178,6 @@ static bool has_bool(terminfo_boolean b)
 	else return (ttm->caps & (1 << b));
 }
 
-/* function that sets the passed terminal */
-int jx_set_terminal(const char *terminal)
-{
-	terminal_map *t = terminals;
-	short term[sizeof(terminals)/sizeof(terminal_map)];
-	unsigned short escode[TS_MAX];
-	int i = 0;
-	/* find the terminal */
-	for (; t->name; t++) {
-		if (strcmp(t->name, terminal)) continue;
-		/* save the target terminal */
-		ttm = t;
-		/* find the parent terminal */
-		while (t->parent != -1) {
-			term[i++] = t - terminals;
-			t = terminals + t->parent;
-		}
-		/* copy escape codes from terminal */
-		memcpy(escode, t->esc, sizeof(escode));
-		/* modify with each successive variation */
-		for (i = i-1; i >= 0; i--) {
-			const terminal_variant *tv = terminals[term[i]].esc;
-			for (; tv->location != -1; tv++)
-				escode[tv->location] = tv->esc;
-		}
-		/* store pointers to the escape code strings */
-		for (i = 0; i < TS_MAX; i++) {
-			if (escode[i] & (1 << 14))
-				escape_code[i] =
-					terminfo_short8_esctable[escode[i] & ~(1<<14)];
-			else if (escode[i] & (1 << 15))
-				escape_code[i] =
-					terminfo_short12_esctable[escode[i] & ~(1<<15)];
-			else
-				escape_code[i] =
-					terminfo_long_esctable[escode[i]];
-			escape_code_len[i] = strlen(escape_code[i]);
-		}
-		return 0;
-	}
-	return -1;
-}
-
 /* function that initialises the library and sets up the terminal */
 int jx_init()
 {
@@ -270,12 +227,6 @@ int jx_init()
 	return JX_SUCCESS;
 }
 
-/* get current width */
-int jx_width() { return term_width; }
-
-/* get current height */
-int jx_height() { return term_height; }
-
 /* function that finalises everything */
 void jx_end()
 {
@@ -295,3 +246,52 @@ void jx_end()
 		initialised = false;
 	}
 }
+
+/* function that sets the passed terminal */
+int jx_set_terminal(const char *terminal)
+{
+	terminal_map *t = terminals;
+	short term[sizeof(terminals)/sizeof(terminal_map)];
+	unsigned short escode[TS_MAX];
+	int i = 0;
+	/* find the terminal */
+	for (; t->name; t++) {
+		if (strcmp(t->name, terminal)) continue;
+		/* save the target terminal */
+		ttm = t;
+		/* find the parent terminal */
+		while (t->parent != -1) {
+			term[i++] = t - terminals;
+			t = terminals + t->parent;
+		}
+		/* copy escape codes from terminal */
+		memcpy(escode, t->esc, sizeof(escode));
+		/* modify with each successive variation */
+		for (i = i-1; i >= 0; i--) {
+			const terminal_variant *tv = terminals[term[i]].esc;
+			for (; tv->location != -1; tv++)
+				escode[tv->location] = tv->esc;
+		}
+		/* store pointers to the escape code strings */
+		for (i = 0; i < TS_MAX; i++) {
+			if (escode[i] & (1 << 14))
+				escape_code[i] =
+					terminfo_short8_esctable[escode[i] & ~(1<<14)];
+			else if (escode[i] & (1 << 15))
+				escape_code[i] =
+					terminfo_short12_esctable[escode[i] & ~(1<<15)];
+			else
+				escape_code[i] =
+					terminfo_long_esctable[escode[i]];
+			escape_code_len[i] = strlen(escape_code[i]);
+		}
+		return 0;
+	}
+	return -1;
+}
+
+/* get current width */
+int jx_width() { return term_width; }
+
+/* get current height */
+int jx_height() { return term_height; }
