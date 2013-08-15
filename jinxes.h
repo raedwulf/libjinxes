@@ -54,11 +54,9 @@ void jx_end();
 
 int jx_set_terminal(const char *terminal);
 
-int jx_width();
-int jx_height();
-
 void jx_clear();
-void jx_fgbg(uint16_t fg, uint16_t bg);
+void jx_fg(uint16_t fg);
+void jx_bg(uint16_t bg);
 
 void jx_show();
 

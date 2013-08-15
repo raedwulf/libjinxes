@@ -178,7 +178,7 @@ static bool has_bool(terminfo_boolean b)
 	else return (ttm->caps & (1 << b));
 }
 
-/* function that initialises the library and sets up the terminal */
+/* initialise the library and sets up the terminal */
 int jx_init()
 {
 	if (!(tty = open("/dev/tty", O_RDWR)))
@@ -216,18 +216,15 @@ int jx_init()
 	BUF_DEBUG(OUT);
 	BUF_FLUSH(OUT);
 
-	struct winsize size;
-	if (ioctl(tty, TIOCGWINSZ, &size))
-		return JX_ERR_WINDOW_SIZE;
-	term_height = size.ws_row;
-	term_width = size.ws_col;
+	/* TODO: check if this is needed */
+	sigwinch_handler(0);
 
 	initialised = true;
 
 	return JX_SUCCESS;
 }
 
-/* function that finalises everything */
+/* finalise everything */
 void jx_end()
 {
 	if (initialised) {
@@ -247,7 +244,7 @@ void jx_end()
 	}
 }
 
-/* function that sets the passed terminal */
+/* set the terminal */
 int jx_set_terminal(const char *terminal)
 {
 	terminal_map *t = terminals;
@@ -290,8 +287,10 @@ int jx_set_terminal(const char *terminal)
 	return -1;
 }
 
-/* get current width */
-int jx_width() { return term_width; }
-
-/* get current height */
-int jx_height() { return term_height; }
+/* clear the terminal */
+void jx_clear()
+{
+	jx_fgbg(JX_DEFAULT, JX_DEFAULT);
+	BUF_PUTE(OUT, TS_CLEAR_SCREEN);
+	BUF_FLUSH(OUT);
+}
