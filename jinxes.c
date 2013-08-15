@@ -87,6 +87,8 @@ static int buf_INput_i;
 static char buf_OUTput[MAX_OUTPUT_BUFFER];
 static int buf_OUTput_i;
 
+static int term_width, term_height;
+
 void debug_print(char* buffer, int l)
 {
 	const char *esc_char= "\a\b\f\n\r\t\v\\";
@@ -133,6 +135,8 @@ const char *jx_error(int e)
 			return "terminal has not been initialised";
 		case JX_ERR_FAILED_TO_OPEN_TTY:
 			return "failed to open tty";
+		case JX_ERR_WINDOW_SIZE:
+			return "failed to set window size";
 		case JX_ERR_TERMIOS:
 			return "termios error";
 		case JX_ERR_UNSUPPORTED_TERMINAL:
@@ -255,10 +259,22 @@ int jx_init()
 	BUF_DEBUG(OUT);
 	BUF_FLUSH(OUT);
 
+	struct winsize size;
+	if (ioctl(tty, TIOCGWINSZ, &size))
+		return JX_ERR_WINDOW_SIZE;
+	term_height = size.ws_row;
+	term_width = size.ws_col;
+
 	initialised = true;
 
 	return JX_SUCCESS;
 }
+
+/* get current width */
+int jx_width() { return term_width; }
+
+/* get current height */
+int jx_height() { return term_height; }
 
 /* function that finalises everything */
 void jx_end()
