@@ -4,11 +4,10 @@
 
 #include <stdint.h>
 
-// Currently there is only one modificator. See also struct tb_event's mod
-// field.
+/* input modifier */
 #define JX_MOD_ALT	0x01
 
-// Colors (see struct tb_cell's fg and bg fields).
+/* supported colours (TODO: xterm's 256 colour support) */
 #define JX_DEFAULT	0x00
 #define JX_BLACK	0x01
 #define JX_RED		0x02
@@ -19,14 +18,12 @@
 #define JX_CYAN		0x07
 #define JX_WHITE	0x08
 
-// Attributes, it is possible to use multiple attributes by combining them
-// using bitwise OR ('|'). Although, colors cannot be combined. But you can
-// combine attributes and a single color. See also struct tb_cell's fg and bg
-// fields.
+/* attribute modification */
 #define JX_BOLD		0x10
 #define JX_UNDERLINE	0x20
 #define JX_REVERSE	0x40
 
+/* error enumeration */
 enum {
 	JX_SUCCESS,
 	JX_ERR_NOT_INIT,
@@ -34,38 +31,63 @@ enum {
 	JX_ERR_WINDOW_SIZE,
 	JX_ERR_TERMIOS,
 	JX_ERR_UNSUPPORTED_TERMINAL,
-	JX_ERR_PIPE_TRAP_ERROR
+	JX_ERR_PIPE_TRAP_ERROR,
+	JX_ERR_OVERLAPPING_REGION,
+	JX_ERR_OUT_OF_REGION
 };
+
+/* region flags */
+#define JX_RF_ANCHOR_LEFT   (1 << 0)
+#define JX_RF_ANCHOR_RIGHT  (1 << 1)
+#define JX_RF_ANCHOR_TOP    (1 << 2)
+#define JX_RF_ANCHOR_BOTTOM (1 << 3)
+#define JX_RF_AUTOSIZE      (1 << 4)
+#define JX_RF_RELATIVE_X    (1 << 5)
+#define JX_RF_RELATIVE_Y    (1 << 6)
+#define JX_RF_RELATIVE_W    (1 << 7)
+#define JX_RF_RELATIVE_H    (1 << 8)
 
 typedef struct {
 	uint8_t type, mod;
 	uint16_t key;
 	uint32_t ch;
-	int32_t w , h;
+	int32_t w, h;
 } jx_event;
 
 typedef struct {
-	uint32_t ch;
+	/* settings */
+	int x, y, w, h;
+	int ax, ay, aw, ah;
+	int flags;
+	/* state */
 	uint16_t fg, bg;
-} jx_cell;
+} jx_region;
 
-int jx_init();
-void jx_end();
+#define JX_SCREEN ((jx_region *)NULL)
+#define JX_MAX_REGIONS 128
+
+int jx_initialise();
+#define jx_initialize jx_initialise
+
+void jx_terminate();
 
 int jx_set_terminal(const char *terminal);
 
-void jx_clear();
-void jx_fg(uint16_t fg);
-void jx_bg(uint16_t bg);
+jx_region *jx_create_region(int x, int y, int w, int h, int flags);
+void jx_destroy_region(jx_region *r);
 
+void jx_begin(jx_region *r);
+void jx_foreground(jx_region *r, uint16_t fg);
+void jx_background(jx_region *r, uint16_t bg);
+int jx_putc(jx_region *r, int x, int y, uint32_t ch);
+int jx_write(jx_region *r, int x, int y, int w, int h, const char *text);
+void jx_clear(jx_region *r);
+void jx_end(jx_region *r);
+
+int jx_layout();
 void jx_show();
 
 void jx_cursor(int cx, int cy);
-
-void jx_putc(int x, int y, const jx_cell *cell);
-void jx_put(int x, int y, uint32_t ch);
-void jx_blitc(int x, int y, int w, int h, const jx_cell *cells);
-void jx_blit(int x, int y, int w, int h, const char *text);
 
 int jx_peek(jx_event *event, int timeout);
 int jx_poll(jx_event *event);

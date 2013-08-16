@@ -59,6 +59,8 @@
 #error Unsupported platform.
 #endif
 
+#define JX_RF_ALLOCATED     (1 << 31)
+
 #if defined(PLATFORM_SOLARIS)
 static inline cfmakeraw(struct termios *termios)
 {
@@ -82,10 +84,12 @@ static const char *terminal;
 static const char *escape_code[TS_MAX];
 static int escape_code_len[TS_MAX];
 
-static char buf_INput[MAX_INPUT_BUFFER];
-static int buf_INput_i;
-static char buf_OUTput[MAX_OUTPUT_BUFFER];
-static int buf_OUTput_i;
+static char IN[MAX_INPUT_BUFFER];
+static int IN_index;
+static char OUT[MAX_OUTPUT_BUFFER];
+static int OUT_index;
+
+static jx_region regions[JX_MAX_REGIONS];
 
 static int term_width, term_height;
 
@@ -115,17 +119,14 @@ void debug_print(char* buffer, int l)
 }
 
 #define SCLEN(x) x,sizeof(x)
-#define BUF_PUTC(b,x) buf_##b##put[buf_##b##put_i++] = x
-#define BUF_PUT(b,x,l) memcpy(buf_##b##put + buf_##b##put_i, x, l), \
-	buf_##b##put_i += l
+#define BUF_PUTC(b,x) b##[b##_index++] = x
+#define BUF_PUT(b,x,l) memcpy(b + b##_index, x, l), b##_index += l
 #define BUF_PUTE(b,x) BUF_PUT(b, escape_code[x], escape_code_len[x])
-#define BUF_RESET(b) buf_##b##put_i = 0
-#define BUF_FLUSHIF(b) if (buf_##b##put_i > MAX_##b##PUT_FLUSH) \
-	write(tty, buf_##b##put, buf_##b##put_i -= buf_##b##put_i), \
-	buf_##b##put_i = 0
-#define BUF_FLUSH(b) write(tty, buf_##b##put, \
-	buf_##b##put_i -= buf_##b##put_i), buf_##b##put_i = 0
-#define BUF_DEBUG(b) debug_print(buf_##b##put, buf_##b##put_i)
+#define BUF_RESET(b) b##_index = 0
+#define BUF_FLUSHIF(b) if (b##_index > MAX_##b##_FLUSH) \
+	write(tty, b, b##_index -= b##_index), b##_index = 0
+#define BUF_FLUSH(b) write(tty, b, b##_index -= b##_index), b##_index = 0
+#define BUF_DEBUG(b) debug_print(b, b##_index)
 
 /* return string descriptions of errors */
 const char *jx_error(int e)
@@ -179,7 +180,7 @@ static bool has_bool(terminfo_boolean b)
 }
 
 /* initialise the library and sets up the terminal */
-int jx_init()
+int jx_initialise()
 {
 	if (!(tty = open("/dev/tty", O_RDWR)))
 		return JX_ERR_OPEN_TTY;
@@ -225,7 +226,7 @@ int jx_init()
 }
 
 /* finalise everything */
-void jx_end()
+void jx_terminate()
 {
 	if (initialised) {
 		/* clear the screen and restore mode */
@@ -287,10 +288,34 @@ int jx_set_terminal(const char *terminal)
 	return -1;
 }
 
-/* clear the terminal */
-void jx_clear()
+/* create a region to edit */
+jx_region *jx_create_region(int x, int y, int w, int h, int flags)
 {
-	jx_fgbg(JX_DEFAULT, JX_DEFAULT);
-	BUF_PUTE(OUT, TS_CLEAR_SCREEN);
-	BUF_FLUSH(OUT);
+	return NULL;
 }
+
+/* destroy a region */
+void jx_destroy_region(jx_region *r)
+{
+}
+
+void jx_foreground(jx_region *r, uint16_t fg)
+{
+}
+
+void jx_background(jx_region *r, uint16_t bg)
+{
+}
+
+/* clear the terminal */
+void jx_clear(jx_region *r)
+{
+	if (r == JX_SCREEN) {
+		jx_foreground(JX_SCREEN, JX_DEFAULT);
+		jx_background(JX_SCREEN, JX_DEFAULT);
+		BUF_PUTE(OUT, TS_CLEAR_SCREEN);
+		BUF_FLUSH(OUT);
+	}
+}
+
+
