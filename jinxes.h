@@ -27,6 +27,8 @@
 enum {
 	JX_SUCCESS,
 	JX_ERR_NOT_INIT,
+	JX_ERR_FAILED_TO_OPEN_TTY,
+	JX_ERR_IOCTL,
 	JX_ERR_OPEN_TTY,
 	JX_ERR_WINDOW_SIZE,
 	JX_ERR_TERMIOS,
@@ -73,6 +75,10 @@ void jx_terminate();
 
 int jx_set_terminal(const char *terminal);
 
+int jx_columns();
+int jx_lines();
+
+void jx_clear();
 jx_region *jx_create_region(int x, int y, int w, int h, int flags);
 void jx_destroy_region(jx_region *r);
 
