@@ -125,7 +125,11 @@ void debug_print(char* buffer, int l)
 #define BUF_FLUSHIF(b) if (b##_index > MAX_##b##_FLUSH) \
 	write(tty, b, b##_index -= b##_index), b##_index = 0
 #define BUF_FLUSH(b) write(tty, b, b##_index -= b##_index), b##_index = 0
+#ifdef DEBUG
 #define BUF_DEBUG(b) debug_print(b, b##_index)
+#else
+#define BUF_DEBUG(b)
+#endif
 
 /* return string descriptions of errors */
 const char *jx_error(int e)

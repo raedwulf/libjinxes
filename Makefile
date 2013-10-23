@@ -12,6 +12,9 @@ INC = jinxes.h
 
 all: $(LIB) jinxestest
 
+debug: CC += -DDEBUG -g
+debug: $(LIB) jinxestest
+
 $(LIB): $(OBJ)
 	$(AR) -rcs $@ $(OBJ)
 
