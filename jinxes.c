@@ -123,8 +123,8 @@ void debug_print(char* buffer, int l)
 #define BUF_PUTE(b,x) BUF_PUT(b, escape_code[x], escape_code_len[x])
 #define BUF_RESET(b) b##_index = 0
 #define BUF_FLUSHIF(b) if (b##_index > MAX_##b##_FLUSH) \
-	write(tty, b, b##_index -= b##_index), b##_index = 0
-#define BUF_FLUSH(b) write(tty, b, b##_index -= b##_index), b##_index = 0
+	write(tty, b, b##_index), b##_index = 0
+#define BUF_FLUSH(b) write(tty, b, b##_index), b##_index = 0
 #ifdef DEBUG
 #define BUF_DEBUG(b) debug_print(b, b##_index)
 #else
@@ -215,10 +215,12 @@ int jx_initialise()
 	if (tcsetattr(tty, TCSAFLUSH, &t))
 		return JX_ERR_TERMIOS;
 
+	OUT_index = 0; IN_index = 0;
+
+	BUF_PUTE(OUT, TS_CLEAR_SCREEN);
 	BUF_PUTE(OUT, TS_ENTER_CA_MODE);
 	BUF_PUTE(OUT, TS_KEYPAD_XMIT);
 	BUF_PUTE(OUT, TS_CURSOR_INVISIBLE);
-	BUF_PUTE(OUT, TS_CLEAR_SCREEN);
 	BUF_DEBUG(OUT);
 	BUF_FLUSH(OUT);
 
@@ -325,7 +327,10 @@ void jx_clear(jx_region *r)
 	if (r == JX_SCREEN) {
 		jx_foreground(JX_SCREEN, JX_DEFAULT);
 		jx_background(JX_SCREEN, JX_DEFAULT);
+		BUF_PUTE(OUT, TS_EXIT_CA_MODE);
 		BUF_PUTE(OUT, TS_CLEAR_SCREEN);
+		BUF_PUTE(OUT, TS_ENTER_CA_MODE);
+		BUF_DEBUG(OUT);
 		BUF_FLUSH(OUT);
 	}
 }
