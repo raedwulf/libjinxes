@@ -82,6 +82,7 @@ static int winch_fds[2];
 static const terminal_map *ttm;
 static const char *terminal;
 static const char *escape_code[TS_MAX];
+static unsigned short t_columns, t_lines;
 static int escape_code_len[TS_MAX];
 
 static char IN[MAX_INPUT_BUFFER];
@@ -90,8 +91,6 @@ static char OUT[MAX_OUTPUT_BUFFER];
 static int OUT_index;
 
 static jx_region regions[JX_MAX_REGIONS];
-
-static int term_width, term_height;
 
 void debug_print(char* buffer, int l)
 {
@@ -140,6 +139,8 @@ const char *jx_error(int e)
 			return "failed to set window size";
 		case JX_ERR_TERMIOS:
 			return "termios error";
+		case JX_ERR_IOCTL:
+			return "ioctl error";
 		case JX_ERR_UNSUPPORTED_TERMINAL:
 			return "unsupported terminal";
 		case JX_ERR_PIPE_TRAP_ERROR:
@@ -218,7 +219,14 @@ int jx_initialise()
 	BUF_FLUSH(OUT);
 
 	/* TODO: check if this is needed */
+	int ret;
 	sigwinch_handler(0);
+	read(winch_fds[0], &ret, sizeof(int));
+	read(winch_fds[0], &t_columns, sizeof(unsigned short));
+	read(winch_fds[0], &t_lines, sizeof(unsigned short));
+
+	if (ret == -1)
+		return JX_ERR_IOCTL;
 
 	initialised = true;
 
@@ -318,4 +326,14 @@ void jx_clear(jx_region *r)
 	}
 }
 
+/* function returns the number of columns in the terminal */
+int jx_columns()
+{
+	return t_columns;
+}
 
+/* function returns the number of lines in the terminal */
+int jx_lines()
+{
+	return t_lines;
+}
