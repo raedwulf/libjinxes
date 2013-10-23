@@ -326,13 +326,13 @@ void jx_clear(jx_region *r)
 	}
 }
 
-/* function returns the number of columns in the terminal */
+/* return the number of columns in the terminal */
 int jx_columns()
 {
 	return t_columns;
 }
 
-/* function returns the number of lines in the terminal */
+/* return the number of lines in the terminal */
 int jx_lines()
 {
 	return t_lines;
