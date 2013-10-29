@@ -59,8 +59,6 @@
 #error Unsupported platform.
 #endif
 
-#define JX_RF_ALLOCATED     (1 << 31)
-
 #if defined(PLATFORM_SOLARIS)
 static inline cfmakeraw(struct termios *termios)
 {
@@ -90,7 +88,7 @@ static int IN_index;
 static char OUT[MAX_OUTPUT_BUFFER];
 static int OUT_index;
 
-static jx_region regions[JX_MAX_REGIONS];
+static jx_window *window_head, *window_tail;
 
 void debug_print(char* buffer, int l)
 {
@@ -234,6 +232,12 @@ int jx_initialise()
 	if (ret == -1)
 		return JX_ERR_IOCTL;
 
+	/* create first window for the screen */
+	window_head = window_tail = calloc(sizeof(jx_window), 1);
+	window_head->w = t_columns;
+	window_head->h = t_lines;
+	window_head->flags = JX_WF_AUTOSIZE | JX_WF_AUTOSIZE;
+
 	initialised = true;
 
 	return JX_SUCCESS;
@@ -302,29 +306,74 @@ int jx_set_terminal(const char *terminal)
 	return -1;
 }
 
-/* create a region to edit */
-jx_region *jx_create_region(int x, int y, int w, int h, int flags)
+/* create a window to edit */
+jx_window *jx_create_window(jx_window *parent, int x, int y, int w, int h,
+		int flags)
 {
-	return NULL;
+	if (parent == JX_SCREEN)
+		parent = window_head;
+	jx_window *win = calloc(sizeof(jx_window), 1);
+	win->x = x;
+	win->y = y;
+	win->w = w;
+	win->h = h;
+	win->flags = flags | JX_WF_DIRTY;
+	win->parent = parent;
+	win->prev = window_tail;
+	window_tail->next = win;
+	return win;
 }
 
-/* destroy a region */
-void jx_destroy_region(jx_region *r)
+/* destroy a window */
+void jx_destroy_window(jx_window *w)
 {
+	/* destroy children */
+	for (jx_window *a = window_head; a != window_tail; a = a->next)
+		if (a->parent == w)
+			jx_destroy_window(a);
+
+	/* finally destroy window */
+	for (jx_window *a = window_head; a != window_tail; a = a->next) {
+		if (a == w) {
+			if (w->flags & JX_WF_PAD) {
+				free(w->pad_text);
+				free(w->pad_fg);
+				free(w->pad_bg);
+			}
+			a->prev->next = w->next;
+			a->next->prev = w->prev;
+			free(w);
+		}
+	}
 }
 
-void jx_foreground(jx_region *r, uint16_t fg)
+/* change a window into a pad */
+void jx_make_pad(jx_window *w, int pw, int ph)
 {
+	w->flags |= JX_WF_PAD | JX_WF_DIRTY;
+	w->pad_text = malloc(pw * ph * sizeof(char));
+	w->pad_fg = malloc(pw * ph * sizeof(uint16_t));
+	w->pad_bg = malloc(pw * ph * sizeof(uint16_t));
 }
 
-void jx_background(jx_region *r, uint16_t bg)
+/* set the default foreground for a window */
+void jx_foreground(jx_window *w, uint16_t fg)
 {
+	w->fg = fg;
+	w->flags |= JX_WF_DIRTY;
+}
+
+/* set the default background for a window */
+void jx_background(jx_window *w, uint16_t bg)
+{
+	w->bg = bg;
+	w->flags |= JX_WF_DIRTY;
 }
 
 /* clear the terminal */
-void jx_clear(jx_region *r)
+void jx_clear(jx_window *w)
 {
-	if (r == JX_SCREEN) {
+	if (w == JX_SCREEN) {
 		jx_foreground(JX_SCREEN, JX_DEFAULT);
 		jx_background(JX_SCREEN, JX_DEFAULT);
 		BUF_PUTE(OUT, TS_EXIT_CA_MODE);
