@@ -129,6 +129,8 @@ void debug_print(char* buffer, int l)
 #define BUF_DEBUG(b)
 #endif
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 /* return string descriptions of errors */
 const char *jx_error(int e)
 {
@@ -180,6 +182,15 @@ static bool has_bool(terminfo_boolean b)
 {
 	if (b >= 32) return (ttm->caps_ & (1 << (b - 32)));
 	else return (ttm->caps & (1 << b));
+}
+
+/* check if window pointer is valid */
+static int check_window(jx_window *w)
+{
+	for (jx_window *a = window_head; a != window_tail; a = a->next)
+		if (w == a)
+			return JX_SUCCESS;
+	return JX_ERR_INVALID_WINDOW;
 }
 
 /* initialise the library and sets up the terminal */
@@ -306,17 +317,27 @@ int jx_set_terminal(const char *terminal)
 	return -1;
 }
 
+/* get the top level main screen window */
+jx_window *jx_screen()
+{
+	return window_head;
+}
+
 /* create a window to edit */
 jx_window *jx_create_window(jx_window *parent, int x, int y, int w, int h,
 		int flags)
 {
-	if (parent == JX_SCREEN)
-		parent = window_head;
+	/* validate parent window */
+	if (check_window(parent))
+		return NULL;
 	jx_window *win = calloc(sizeof(jx_window), 1);
 	win->x = x;
 	win->y = y;
 	win->w = w;
 	win->h = h;
+	win->buffer_text = malloc(w * h * sizeof(wchar_t));
+	win->buffer_fg = malloc(w * h * sizeof(uint16_t));
+	win->buffer_bg = malloc(w * h * sizeof(uint16_t));
 	win->flags = flags | JX_WF_DIRTY;
 	win->parent = parent;
 	win->prev = window_tail;
@@ -325,8 +346,12 @@ jx_window *jx_create_window(jx_window *parent, int x, int y, int w, int h,
 }
 
 /* destroy a window */
-void jx_destroy_window(jx_window *w)
+int jx_destroy_window(jx_window *w)
 {
+	/* validate window */
+	if (check_window(w))
+		return JX_ERR_INVALID_WINDOW;
+
 	/* destroy children */
 	for (jx_window *a = window_head; a != window_tail; a = a->next)
 		if (a->parent == w)
@@ -336,24 +361,177 @@ void jx_destroy_window(jx_window *w)
 	for (jx_window *a = window_head; a != window_tail; a = a->next) {
 		if (a == w) {
 			if (w->flags & JX_WF_PAD) {
-				free(w->pad_text);
-				free(w->pad_fg);
-				free(w->pad_bg);
+				free(w->buffer_text);
+				free(w->buffer_fg);
+				free(w->buffer_bg);
 			}
 			a->prev->next = w->next;
 			a->next->prev = w->prev;
 			free(w);
+
+			return JX_SUCCESS;
 		}
 	}
+
+	return JX_ERR_INVALID_WINDOW;
 }
 
 /* change a window into a pad */
-void jx_make_pad(jx_window *w, int pw, int ph)
+int jx_make_pad(jx_window *w, int pw, int ph)
 {
+	/* validate window */
+	if (check_window(w))
+		return JX_ERR_INVALID_WINDOW;
+
+	if (pw < w->w || ph < w->h)
+		return JX_ERR_INVALID_PAD_SIZE;
+
 	w->flags |= JX_WF_PAD | JX_WF_DIRTY;
-	w->pad_text = malloc(pw * ph * sizeof(char));
-	w->pad_fg = malloc(pw * ph * sizeof(uint16_t));
-	w->pad_bg = malloc(pw * ph * sizeof(uint16_t));
+	if (w->buffer_text)
+		free(w->buffer_text);
+	w->buffer_text = malloc(pw * ph * sizeof(wchar_t));
+	if (w->buffer_fg)
+		free(w->buffer_fg);
+	w->buffer_fg = malloc(pw * ph * sizeof(uint16_t));
+	if (w->buffer_bg)
+		free(w->buffer_bg);
+	w->buffer_bg = malloc(pw * ph * sizeof(uint16_t));
+
+	return JX_SUCCESS;
+}
+
+/* move a window */
+int jx_move(jx_window *w, int x, int y)
+{
+	/* validate window */
+	if (check_window(w))
+		return JX_ERR_INVALID_WINDOW;
+	/* check if any work needs to be done */
+	if (w->x == x && w->y == y)
+		return JX_SUCCESS;
+
+	/* the parent window is dirty */
+	w->parent->flags |= JX_WF_DIRTY;
+	/* the siblings are dirty if this window overlaps them */
+	for (jx_window *a = window_head; a != window_tail; a = a->next) {
+		/* only process windows that are under this window */
+		if (a == w) break;
+		/* if overlap, mark as dirty */
+		if (a->parent == w->parent &&
+		    a->x < w->x + w->w && a->x + a->w > w->x &&
+		    a->y < w->y + w->h && a->y + a->h > w->y)
+			a->flags |= JX_WF_DIRTY;
+	}
+	/* this window is dirty */
+	w->flags |= JX_WF_DIRTY;
+	w->x = x;
+	w->y = y;
+
+	return JX_SUCCESS;
+}
+
+int jx_resize(jx_window *win, int w, int h)
+{
+	/* validate window */
+	if (check_window(win))
+		return JX_ERR_INVALID_WINDOW;
+	/* check size is valid */
+	if (w <= 0 || h <= 0)
+		return JX_ERR_INVALID_WINDOW_SIZE;
+	/* check if any work needs to be done */
+	if (win->w == w && win->h == h)
+		return JX_SUCCESS;
+
+	win->parent->flags |= JX_WF_DIRTY;
+	/* the siblings are dirty if this window overlaps them */
+	for (jx_window *a = window_head; a != window_tail; a = a->next) {
+		/* only process windows that are under this window */
+		if (a == win) break;
+		/* if overlap, mark as dirty */
+		if (a->parent == win->parent &&
+		    (a->x < win->x + win->w && a->x + a->w > win->x &&
+		    a->y < win->y + win->h && a->y + a->h > win->y) ||
+		    (a->x < win->x + w && a->x + a->w > win->x &&
+		    a->y < win->y + h && a->y + a->h > win->y))
+			a->flags |= JX_WF_DIRTY;
+	}
+	if (win->flags & JX_WF_PAD) {
+		if (win->pw < w || win->ph < h)
+			jx_resize_pad(win, MAX(w, win->pw), MAX(h, win->ph));
+	} else {
+		wchar_t *buffer_text = malloc(w * h * sizeof(wchar_t));
+		memcpy(buffer_text, win->buffer_text, w * h * sizeof(wchar_t));
+		uint16_t *buffer_fg = malloc(w * h * sizeof(uint16_t));
+		memcpy(buffer_fg, win->buffer_fg, w * h * sizeof(uint16_t));
+		uint16_t *buffer_bg = malloc(w * h * sizeof(uint16_t));
+		memcpy(buffer_bg, win->buffer_bg, w * h * sizeof(uint16_t));
+		win->buffer_text = buffer_text;
+		win->buffer_fg = buffer_fg;
+		win->buffer_bg = buffer_bg;
+	}
+	win->w = w;
+	win->h = h;
+
+	return JX_SUCCESS;
+}
+
+int jx_scroll_pad(jx_window *w, int px, int py)
+{
+	/* validate window */
+	if (check_window(w))
+		return JX_ERR_INVALID_WINDOW;
+	/* validate is pad */
+	if (w->flags & JX_WF_PAD)
+		return JX_ERR_INVALID_PAD;
+	/* check if its in range */
+	if (w->px < 0 || w->py < 0 ||
+	    w->px + w->w > w->pw || w->py + w->h > w->ph)
+		return JX_ERR_OUT_OF_PAD;
+	/* check if any work needs to be done */
+	if (w->px == px && w->py && py)
+		return JX_SUCCESS;
+
+	w->flags |= JX_WF_DIRTY;
+	w->px = px;
+	w->py = py;
+
+	return JX_SUCCESS;
+}
+
+int jx_resize_pad(jx_window *w, int pw, int ph)
+{
+	/* validate window */
+	if (check_window(w))
+		return JX_ERR_INVALID_WINDOW;
+	/* validate is pad */
+	if (w->flags & JX_WF_PAD)
+		return JX_ERR_INVALID_PAD;
+	/* check size is valid */
+	if (pw <= 0 || ph <= 0)
+		return JX_ERR_INVALID_PAD_SIZE;
+	/* check if its in range */
+	if (pw < w->w || ph < w->h)
+		return JX_ERR_OUT_OF_PAD;
+	/* move the scroll into range */
+	if (w->px + w->w > pw)
+		w->px = pw - w->w;
+	if (w->py + w->h > ph)
+		w->py = ph - w->h;
+	
+	wchar_t *buffer_text = malloc(pw * ph * sizeof(wchar_t));
+	memcpy(buffer_text, w->buffer_text, pw * ph * sizeof(wchar_t));
+	uint16_t *buffer_fg = malloc(pw * ph * sizeof(uint16_t));
+	memcpy(buffer_fg, w->buffer_fg, pw * ph * sizeof(uint16_t));
+	uint16_t *buffer_bg = malloc(pw * ph * sizeof(uint16_t));
+	memcpy(buffer_bg, w->buffer_bg, pw * ph * sizeof(uint16_t));
+	w->buffer_text = buffer_text;
+	w->buffer_fg = buffer_fg;
+	w->buffer_bg = buffer_bg;
+	w->flags |= JX_WF_DIRTY;
+	w->pw = pw;
+	w->ph = ph;
+
+	return JX_SUCCESS;
 }
 
 /* set the default foreground for a window */
@@ -371,17 +549,29 @@ void jx_background(jx_window *w, uint16_t bg)
 }
 
 /* clear the terminal */
-void jx_clear(jx_window *w)
+int jx_clear(jx_window *w)
 {
-	if (w == JX_SCREEN) {
-		jx_foreground(JX_SCREEN, JX_DEFAULT);
-		jx_background(JX_SCREEN, JX_DEFAULT);
+	if (w == window_head) {
+		jx_foreground(w, JX_DEFAULT);
+		jx_background(w, JX_DEFAULT);
 		BUF_PUTE(OUT, TS_EXIT_CA_MODE);
 		BUF_PUTE(OUT, TS_CLEAR_SCREEN);
 		BUF_PUTE(OUT, TS_ENTER_CA_MODE);
 		BUF_DEBUG(OUT);
 		BUF_FLUSH(OUT);
+	} else {
+		/* validate window */
+		if (check_window(w))
+			return JX_ERR_INVALID_WINDOW;
 	}
+
+	int width = w->flags & JX_WF_PAD ? w->pw : w->w;
+	int height = w->flags & JX_WF_PAD ? w->ph : w->h;
+	memset(w->buffer_text, 0, width * height * sizeof(wchar_t));
+	memset(w->buffer_fg, 0, width * height * sizeof(uint16_t));
+	memset(w->buffer_bg, 0, width * height * sizeof(uint16_t));
+
+	return JX_SUCCESS;
 }
 
 /* return the number of columns in the terminal */

@@ -3,6 +3,7 @@
 #define JINXES_H
 
 #include <stdint.h>
+#include <wchar.h>
 
 /* input modifier */
 #define JX_MOD_ALT	0x01
@@ -36,7 +37,11 @@ enum {
 	JX_ERR_PIPE_TRAP_ERROR,
 	JX_ERR_OVERLAPPING_WINDOW,
 	JX_ERR_OUT_OF_WINDOW,
-	JX_ERR_INVALID_WINDOW
+	JX_ERR_OUT_OF_PAD,
+	JX_ERR_INVALID_WINDOW,
+	JX_ERR_INVALID_PAD,
+	JX_ERR_INVALID_WINDOW_SIZE,
+	JX_ERR_INVALID_PAD_SIZE
 };
 
 /* window flags */
@@ -49,6 +54,10 @@ enum {
 #define JX_WF_RELATIVE_Y    (1 << 6)
 #define JX_WF_RELATIVE_W    (1 << 7)
 #define JX_WF_RELATIVE_H    (1 << 8)
+#define JX_WF_DOCK_LEFT     (1 << 9)
+#define JX_WF_DOCK_RIGHT    (1 << 10)
+#define JX_WF_DOCK_TOP      (1 << 11)
+#define JX_WF_DOCK_BOTTOM   (1 << 12)
 #define JX_WF_DIRTY         (1 << 16)
 #define JX_WF_PAD           (1 << 18)
 
@@ -67,16 +76,16 @@ typedef struct jx_window_s {
 	int flags;
 	/* state */
 	uint16_t fg, bg;
-	char *pad_text;
-	uint16_t *pad_fg;
-	uint16_t *pad_bg;
+	wchar_t *buffer_text;
+	uint16_t *buffer_fg;
+	uint16_t *buffer_bg;
 	/* linked list */
 	struct jx_window_s *prev, *next;
 	/* hierarchy */
 	struct jx_window_s *parent;
 } jx_window;
 
-#define JX_SCREEN ((jx_window *)NULL)
+#define JX_SCREEN (jx_screen())
 
 int jx_initialise();
 #define jx_initialize jx_initialise
@@ -88,22 +97,24 @@ int jx_set_terminal(const char *terminal);
 int jx_columns();
 int jx_lines();
 
-void jx_clear();
+jx_window *jx_screen();
 jx_window *jx_create_window(jx_window *parent, int x, int y, int w, int h, int flags);
-void jx_destroy_window(jx_window *w);
-void jx_make_pad(jx_window *w, int pw, int ph);
-void jx_view_pad(jx_window *w, int px, int py);
+int jx_destroy_window(jx_window *w);
+int jx_make_pad(jx_window *w, int pw, int ph);
 
-void jx_begin(jx_window *w);
+int jx_move(jx_window *w, int x, int y);
+int jx_resize(jx_window *win, int w, int h);
+int jx_scroll_pad(jx_window *w, int px, int py);
+int jx_resize_pad(jx_window *w, int pw, int ph);
+
 void jx_foreground(jx_window *w, uint16_t fg);
 void jx_background(jx_window *w, uint16_t bg);
-int jx_putc(jx_window *w, int x, int y, uint32_t ch);
+int jx_putc(jx_window *w, int x, int y, wchar_t ch);
 int jx_write(jx_window *win, int x, int y, int w, int h, const char *text);
-void jx_clear(jx_window *w);
-void jx_end(jx_window *w);
+int jx_clear(jx_window *w);
 
 int jx_layout();
-void jx_show();
+void jx_render();
 
 void jx_cursor(int cx, int cy);
 
