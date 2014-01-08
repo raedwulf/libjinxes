@@ -213,6 +213,7 @@ int jx_initialise()
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 	sa.sa_handler = sigwinch_handler;
+	sigaction(SIGWINCH, &sa, 0);
 
 	if (tcgetattr(tty, &old_t))
 		return JX_ERR_TERMIOS;
